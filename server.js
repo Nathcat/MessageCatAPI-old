@@ -248,6 +248,9 @@ async function RequestUserByID(id, callback) {
 }
 
 async function CreateUser(data, callback) {
+    data.username = data.username.replaceAll("'", "''");
+    data.email = data.email.replaceAll("'", "''");
+
     RequestUser(data.email, (users) => {
         if (users.length == 0) {
             var con = mysql.createConnection({
@@ -293,6 +296,8 @@ async function GetFriends(userID, callback) {
 }
 
 async function SendMessage(messageJson, callback) {
+    messageJson.content = messageJson.content.replaceAll("'", "''");
+
     var con = mysql.createConnection({
         host: "localhost",
         user: "login",
