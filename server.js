@@ -2,6 +2,7 @@ var http = require("http");
 var url = require("url");
 var mysql = require("mysql");
 var fs = require("fs");
+const { setDefaultResultOrder } = require("dns");
 
 http.createServer(function (req, res) {
     // Parse the URL to check the requested action
@@ -482,20 +483,27 @@ async function AcceptFriendRequest(data, callback) {
         if (err) throw err;
     });
 
+    var requestExists = true;
+
     con.query("DELETE FROM `friend-requests` WHERE senderID like " + data.senderID + " and recipientID like " + data.recipientID, function (err, result, fields) {
         if (err) throw err;
+        if (results.length == 0) {
+            requestExists = false;
+        }
     });
 
-    con.query("INSERT INTO friends (userID, friend) values (" + data.senderID + ", " + data.recipientID + ")", function (err, result, fields) {
-        if (err) throw err;
-    });
+    if (requestExists) {
+        con.query("INSERT INTO friends (userID, friend) values (" + data.senderID + ", " + data.recipientID + ")", function (err, result, fields) {
+            if (err) throw err;
+        });
 
-    con.query("INSERT INTO friends (userID, friend) values (" + data.recipientID + ", " + data.senderID + ")", function (err, result, fields) {
-        if (err) throw err;
+        con.query("INSERT INTO friends (userID, friend) values (" + data.recipientID + ", " + data.senderID + ")", function (err, result, fields) {
+            if (err) throw err;
 
-        con.destroy();
-        return callback();
-    });
+            con.destroy();
+            return callback();
+        });
+    }
 }
 
 async function GetFriendRequests(data, callback) {
