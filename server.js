@@ -193,6 +193,122 @@ http.createServer(function (req, res) {
             });
         });
     }
+    else if (path === "/api/sendfriendrequest") {
+        if (req.method == "GET") {
+            res.writeHead(200, {
+                "Access-Control-Allow-Origin": "*",
+                "Content-Type": "text/html"
+            });
+    
+            res.end("<h1>Invalid method</h1>");
+        }
+
+        res.writeHead(200, {
+            "Access-Control-Allow-Origin": "*",
+            "Content-Type": "text/plain"
+        });
+
+        let buffers = [];
+        req.on("data", (chunk) => {
+            buffers.push(chunk);
+        });
+
+        req.on("end", () => {
+            let data = JSON.parse(buffers.concat());
+
+            SendFriendRequest(data, () => {
+                return res.end("OK");
+            });
+        });
+    }
+    else if (path === "/api/acceptfriendrequest") {
+        if (req.method == "GET") {
+            res.writeHead(200, {
+                "Access-Control-Allow-Origin": "*",
+                "Content-Type": "text/html"
+            });
+    
+            res.end("<h1>Invalid method</h1>");
+        }
+
+        res.writeHead(200, {
+            "Access-Control-Allow-Origin": "*",
+            "Content-Type": "text/plain"
+        });
+
+        let buffers = [];
+        req.on("data", (chunk) => {
+            buffers.push(chunk);
+        });
+
+        req.on("end", () => {
+            let data = JSON.parse(buffers.concat());
+
+            AcceptFriendRequest(data, () => {
+                return res.end("OK");
+            });
+        });
+    }
+    else if (path === "/api/getfriendrequests") {
+        if (req.method == "GET") {
+            res.writeHead(200, {
+                "Access-Control-Allow-Origin": "*",
+                "Content-Type": "text/html"
+            });
+    
+            res.end("<h1>Invalid method</h1>");
+        }
+
+        res.writeHead(200, {
+            "Access-Control-Allow-Origin": "*",
+            "Content-Type": "text/plain"
+        });
+
+        let buffers = [];
+        req.on("data", (chunk) => {
+            buffers.push(chunk);
+        });
+
+        req.on("end", () => {
+            let data = JSON.parse(buffers.concat());
+
+            GetFriendRequests(data, (result) => {
+                return res.end(
+                    result.map((item) => {
+                        return JSON.stringify(item);
+                    }).join("<[SePaRaToR]>")
+                );
+            });
+        });
+    }
+    else if (path === "/api/declinefriendrequest") {
+        if (req.method == "GET") {
+            res.writeHead(200, {
+                "Access-Control-Allow-Origin": "*",
+                "Content-Type": "text/html"
+            });
+    
+            res.end("<h1>Invalid method</h1>");
+        }
+
+        res.writeHead(200, {
+            "Access-Control-Allow-Origin": "*",
+            "Content-Type": "text/plain"
+        });
+
+        let buffers = [];
+        req.on("data", (chunk) => {
+            buffers.push(chunk);
+        });
+
+        req.on("end", () => {
+            let data = JSON.parse(buffers.concat());
+
+            DeclineFriendRequest(data, () => {
+                return res.end("OK");
+            });
+        });
+    }
 
 }).listen(8080, "0.0.0.0");
 
@@ -332,5 +448,89 @@ async function GetMessages(data, callback) {
         //if (err) throw err;
         con.destroy();
         return callback(result);
+    });
+}
+
+async function SendFriendRequest(data, callback) {
+    var con = mysql.createConnection({
+        host: "localhost",
+        user: "login",
+        password: "",
+        database: "messagecat"
+      });
+
+    con.connect(function(err) {
+        if (err) throw err;
+    });
+
+    con.query("INSERT INTO `friend-requests` (senderID, recipientID) values (" + data.senderID + ", " + data.recipientID + ")", function (err, result, fields) {
+        //if (err) throw err;
+        con.destroy();
+        return callback();
+    });
+}
+
+async function AcceptFriendRequest(data, callback) {
+    var con = mysql.createConnection({
+        host: "localhost",
+        user: "login",
+        password: "",
+        database: "messagecat"
+      });
+
+    con.connect(function(err) {
+        if (err) throw err;
+    });
+
+    con.query("DELETE FROM `friend-requests` WHERE senderID like " + data.senderID + " and recipientID like " + data.recipientID, function (err, result, fields) {
+        if (err) throw err;
+    });
+
+    con.query("INSERT INTO friends (userID, friend) values (" + data.senderID + ", " + data.recipientID + ")", function (err, result, fields) {
+        if (err) throw err;
+    });
+
+    con.query("INSERT INTO friends (userID, friend) values (" + data.recipientID + ", " + data.senderID + ")", function (err, result, fields) {
+        if (err) throw err;
+
+        con.destroy();
+        return callback();
+    });
+}
+
+async function GetFriendRequests(data, callback) {
+    var con = mysql.createConnection({
+        host: "localhost",
+        user: "login",
+        password: "",
+        database: "messagecat"
+      });
+
+    con.connect(function(err) {
+        if (err) throw err;
+    });
+
+    con.query("SELECT * FROM `friend-requests` WHERE recipientID like " + data.ID, function (err, result, fields) {
+        //if (err) throw err;
+        con.destroy();
+        return callback(result);
+    });
+}
+
+async function DeclineFriendRequest(data, callback) {
+    var con = mysql.createConnection({
+        host: "localhost",
+        user: "login",
+        password: "",
+        database: "messagecat"
+      });
+
+    con.connect(function(err) {
+        if (err) throw err;
+    });
+
+    con.query("DELETE FROM `friend-requests` WHERE senderID like " + data.senderID + " and recipientID like " + data.recipientID, function (err, result, fields) {
+        if (err) throw err;
+        return callback();
     });
 }
