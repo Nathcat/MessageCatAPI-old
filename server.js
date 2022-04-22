@@ -384,6 +384,38 @@ http.createServer(function (req, res) {
             })
         })
     }
+    else if (path === "/api/getusersettings") {
+        if (req.method == "GET") {
+            res.writeHead(200, {
+                "Access-Control-Allow-Origin": "*",
+                "Content-Type": "text/html"
+            });
+    
+            return res.end("<h1>Invalid method</h1>");
+        }
+
+        res.writeHead(200, {
+            "Access-Control-Allow-Origin": "*",
+            "Content-Type": "application/json"
+        });
+
+        let buffers = [];
+        req.on("data", (chunk) => {
+            buffers.push(chunk);
+        });
+
+        req.on("end", () => {
+            let data = JSON.parse(buffers.concat());
+            GetUserSettings(data, (results) => {
+                if (results.length == 1) {
+                    return res.end(JSON.stringify(results[0]));
+                }
+                else {
+                    return res.end("");
+                }
+            })
+        })
+    }
 
 }).listen(8080);
 
@@ -631,6 +663,25 @@ async function SearchForUser(data, callback) {
     });
 
     con.query("SELECT * FROM users WHERE username like '" + data.username + "'", function (err, result, fields) {
+        if (err) throw err;
+        con.destroy();
+        return callback(result);
+    });
+}
+
+async function GetUserSettings(data, callback) {
+    var con = mysql.createConnection({
+        host: "localhost",
+        user: "login",
+        password: "",
+        database: "messagecat"
+      });
+
+    con.connect(function(err) {
+        if (err) throw err;
+    });
+
+    con.query("SELECT * FROM `user-settings` WHERE userID like '" + data.ID + "'", function (err, result, fields) {
         if (err) throw err;
         con.destroy();
         return callback(result);
