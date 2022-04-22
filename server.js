@@ -597,7 +597,7 @@ async function SendMessage(messageJson, callback) {
                         from: 'messagecatnotifications@gmail.com',
                         to: recipientData.email,
                         subject: senderData.username + " sent you a message!",
-                        html: '<a href="http://localhost:4200/">Go to MessageCat</a>'
+                        html: '<a href="http://messagecat.nathcat.cloudns.cl/">Go to MessageCat</a>'
                     }
 
                     mailTransporter.sendMail(mail, function(error, info) {});
