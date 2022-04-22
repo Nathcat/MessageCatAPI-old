@@ -15,7 +15,7 @@ http.createServer(function (req, res) {
                 "Content-Type": "text/html"
             });
     
-            res.end("<h1>Invalid method</h1>");
+            return res.end("<h1>Invalid method</h1>");
         }
 
         res.writeHead(200, {
@@ -64,7 +64,7 @@ http.createServer(function (req, res) {
                 "Content-Type": "text/html"
             });
     
-            res.end("<h1>Invalid method</h1>");
+            return res.end("<h1>Invalid method</h1>");
         }
 
         res.writeHead(200, {
@@ -98,7 +98,7 @@ http.createServer(function (req, res) {
                 "Content-Type": "text/html"
             });
     
-            res.end("<h1>Invalid method</h1>");
+            return res.end("<h1>Invalid method</h1>");
         }
 
         res.writeHead(200, {
@@ -114,6 +114,10 @@ http.createServer(function (req, res) {
         req.on("end", () => {
             let body = JSON.parse(buffers.concat());
             GetFriends(body.ID, async(friendRecords) => {
+                if (friendRecords.length == 0) {
+                    return res.end("");
+                }
+
                 var friendsData = [];
                 for (let i = 0; i < friendRecords.length; i++) {
                     let record = JSON.parse(JSON.stringify(friendRecords[i]));
@@ -137,7 +141,7 @@ http.createServer(function (req, res) {
                 "Content-Type": "text/html"
             });
     
-            res.end("<h1>Invalid method</h1>");
+            return res.end("<h1>Invalid method</h1>");
         }
 
         res.writeHead(200, {
@@ -164,7 +168,7 @@ http.createServer(function (req, res) {
                 "Content-Type": "text/html"
             });
     
-            res.end("<h1>Invalid method</h1>");
+            return res.end("<h1>Invalid method</h1>");
         }
 
         res.writeHead(200, {
@@ -201,7 +205,7 @@ http.createServer(function (req, res) {
                 "Content-Type": "text/html"
             });
     
-            res.end("<h1>Invalid method</h1>");
+            return res.end("<h1>Invalid method</h1>");
         }
 
         res.writeHead(200, {
@@ -229,7 +233,7 @@ http.createServer(function (req, res) {
                 "Content-Type": "text/html"
             });
     
-            res.end("<h1>Invalid method</h1>");
+            return res.end("<h1>Invalid method</h1>");
         }
 
         res.writeHead(200, {
@@ -257,7 +261,7 @@ http.createServer(function (req, res) {
                 "Content-Type": "text/html"
             });
     
-            res.end("<h1>Invalid method</h1>");
+            return res.end("<h1>Invalid method</h1>");
         }
 
         res.writeHead(200, {
@@ -274,11 +278,16 @@ http.createServer(function (req, res) {
             let data = JSON.parse(buffers.concat());
 
             GetFriendRequests(data, (result) => {
-                return res.end(
-                    result.map((item) => {
-                        return JSON.stringify(item);
-                    }).join("<[SePaRaToR]>")
-                );
+                if (result) {
+                    return res.end(
+                        result.map((item) => {
+                            return JSON.stringify(item);
+                        }).join("<[SePaRaToR]>")
+                    );
+                }
+                else {
+                    return res.end("");
+                }
             });
         });
     }
@@ -289,7 +298,7 @@ http.createServer(function (req, res) {
                 "Content-Type": "text/html"
             });
     
-            res.end("<h1>Invalid method</h1>");
+            return res.end("<h1>Invalid method</h1>");
         }
 
         res.writeHead(200, {
@@ -310,8 +319,73 @@ http.createServer(function (req, res) {
             });
         });
     }
+    else if (path === "/api/searchforuser") {
+        if (req.method == "GET") {
+            res.writeHead(200, {
+                "Access-Control-Allow-Origin": "*",
+                "Content-Type": "text/html"
+            });
+    
+            return res.end("<h1>Invalid method</h1>");
+        }
 
-}).listen(8080, "0.0.0.0");
+        res.writeHead(200, {
+            "Access-Control-Allow-Origin": "*",
+            "Content-Type": "text/plain"
+        });
+
+        let buffers = [];
+        req.on("data", (chunk) => {
+            buffers.push(chunk);
+        });
+
+        req.on("end", () => {
+            let data = JSON.parse(buffers.concat());
+
+            SearchForUser(data, (results) => {
+                return res.end(
+                    results.map((item) => {
+                        return JSON.stringify(item);
+                    }).join("<[SePaRaToR]>")
+                );
+            });
+        });
+    }
+    else if (path === "/api/getuser/id") {
+        if (req.method == "GET") {
+            res.writeHead(200, {
+                "Access-Control-Allow-Origin": "*",
+                "Content-Type": "text/html"
+            });
+    
+            return res.end("<h1>Invalid method</h1>");
+        }
+
+        res.writeHead(200, {
+            "Access-Control-Allow-Origin": "*",
+            "Content-Type": "application/json"
+        });
+
+        let buffers = [];
+        req.on("data", (chunk) => {
+            buffers.push(chunk);
+        });
+
+        req.on("end", () => {
+            let data = JSON.parse(buffers.concat());
+
+            RequestUserByID(data.ID, (results) => {
+                if (results.length == 1) {
+                    return res.end(JSON.stringify(results[0]));
+                }
+                else {
+                    return res.end({});
+                }
+            })
+        })
+    }
+
+}).listen(8080);
 
 async function GetUser(req, callback) {
     let buffers = [];
@@ -357,7 +431,7 @@ async function RequestUserByID(id, callback) {
         if (err) throw err;
     });
 
-    con.query("SELECT * FROM users WHERE ID like " + id + "", async (err, result, fields) => {
+    con.query("SELECT * FROM users WHERE ID like " + id + " order by ID asc", async (err, result, fields) => {
         if (err) throw err;
         con.destroy();
         return await callback(result);
@@ -487,7 +561,7 @@ async function AcceptFriendRequest(data, callback) {
 
     con.query("DELETE FROM `friend-requests` WHERE senderID like " + data.senderID + " and recipientID like " + data.recipientID, function (err, result, fields) {
         if (err) throw err;
-        if (results.length == 0) {
+        if (result.length == 0) {
             requestExists = false;
         }
     });
@@ -539,6 +613,26 @@ async function DeclineFriendRequest(data, callback) {
 
     con.query("DELETE FROM `friend-requests` WHERE senderID like " + data.senderID + " and recipientID like " + data.recipientID, function (err, result, fields) {
         if (err) throw err;
+        con.destroy();
         return callback();
+    });
+}
+
+async function SearchForUser(data, callback) {
+    var con = mysql.createConnection({
+        host: "localhost",
+        user: "login",
+        password: "",
+        database: "messagecat"
+      });
+
+    con.connect(function(err) {
+        if (err) throw err;
+    });
+
+    con.query("SELECT * FROM users WHERE username like '" + data.username + "'", function (err, result, fields) {
+        if (err) throw err;
+        con.destroy();
+        return callback(result);
     });
 }
