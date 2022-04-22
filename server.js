@@ -2,7 +2,15 @@ var http = require("http");
 var url = require("url");
 var mysql = require("mysql");
 var fs = require("fs");
-const { setDefaultResultOrder } = require("dns");
+var nodemailer = require("nodemailer");
+
+const mailTransporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: 'messagecatnotifications@gmail.com',
+        pass: 'MessageThatCat1234**4321'
+    }
+});
 
 http.createServer(function (req, res) {
     // Parse the URL to check the requested action
@@ -114,6 +122,10 @@ http.createServer(function (req, res) {
         req.on("end", () => {
             let body = JSON.parse(buffers.concat());
             GetFriends(body.ID, async(friendRecords) => {
+                if (friendRecords === undefined) {
+                    return res.end("");
+                }
+
                 if (friendRecords.length == 0) {
                     return res.end("");
                 }
@@ -468,11 +480,11 @@ async function RequestUser(email, callback) {
       });
 
     con.connect(function(err) {
-        if (err) throw err;
+        //if (err) throw err;
     });
 
     con.query("SELECT * FROM users WHERE email like '" + email + "'", function (err, result, fields) {
-        if (err) throw err;
+        //if (err) throw err;
         con.destroy();
         return callback(result);
     });
@@ -487,11 +499,11 @@ async function RequestUserByID(id, callback) {
       });
 
     con.connect(function(err) {
-        if (err) throw err;
+        //if (err) throw err;
     });
 
     con.query("SELECT * FROM users WHERE ID like " + id + " order by ID asc", async (err, result, fields) => {
-        if (err) throw err;
+        //if (err) throw err;
         con.destroy();
         return await callback(result);
     });
@@ -511,11 +523,11 @@ async function CreateUser(data, callback) {
             });
         
             con.connect(function(err) {
-                if (err) throw err;
+                //if (err) throw err;
             });
         
             con.query("INSERT INTO users (username, password, email) values ('" + data.username + "', '" + data.password + "', '" + data.email + "')", function (err, result, fields) {
-                if (err) throw err;
+                //if (err) throw err;
                 con.destroy();
                 callback();
             });
@@ -535,11 +547,11 @@ async function GetFriends(userID, callback) {
       });
 
     con.connect(function(err) {
-        if (err) throw err;
+        //if (err) throw err;
     });
 
     con.query("SELECT * FROM friends WHERE userID like " + userID + "", function (err, result, fields) {
-        if (err) throw err;
+        //if (err) throw err;
         con.destroy();
         return callback(result);
     });
@@ -556,14 +568,36 @@ async function SendMessage(messageJson, callback) {
       });
 
     con.connect(function(err) {
-        if (err) throw err;
+        //if (err) throw err;
     });
 
     con.query("INSERT INTO messages (senderID, recipientID, content) values (" + messageJson.senderID +  ", " + messageJson.recipientID + ", '" + messageJson.content + "')", function (err, result, fields) {
-        if (err) throw err;
+        //if (err) throw err;
         con.destroy();
         return callback();
     });
+
+    GetUserSettings({ID: messageJson.recipientID}, (results) => {
+        let data = JSON.parse(JSON.stringify(results[0]));
+        if (data.send_email_notifications == "1") {
+            RequestUserByID(messageJson.recipientID, (users) => {
+                let recipientData = JSON.parse(JSON.stringify(users[0]));
+
+                RequestUserByID(messageJson.senderID, (sender) => {
+                    let senderData = JSON.parse(JSON.stringify(sender[0]));
+
+                    let mail = {
+                        from: 'messagecatnotifications@gmail.com',
+                        to: recipientData.email,
+                        subject: senderData.username + " sent you a message!",
+                        html: '<a href="http://localhost:4200/">Go to MessageCat</a>'
+                    }
+
+                    mailTransporter.sendMail(mail, function(error, info) {});
+                })
+            })
+        }
+    })
 }
 
 async function GetMessages(data, callback) {
@@ -575,11 +609,11 @@ async function GetMessages(data, callback) {
       });
 
     con.connect(function(err) {
-        if (err) throw err;
+        //if (err) throw err;
     });
 
     con.query("SELECT * FROM messages WHERE (senderID like " + data.userID + " and recipientID like " + data.friendID + ") or (senderID like " + data.friendID + " and recipientID like " + data.userID + ")", function (err, result, fields) {
-        //if (err) throw err;
+        ////if (err) throw err;
         con.destroy();
         return callback(result);
     });
@@ -594,11 +628,11 @@ async function SendFriendRequest(data, callback) {
       });
 
     con.connect(function(err) {
-        if (err) throw err;
+        //if (err) throw err;
     });
 
     con.query("INSERT INTO `friend-requests` (senderID, recipientID) values (" + data.senderID + ", " + data.recipientID + ")", function (err, result, fields) {
-        //if (err) throw err;
+        ////if (err) throw err;
         con.destroy();
         return callback();
     });
@@ -613,13 +647,13 @@ async function AcceptFriendRequest(data, callback) {
       });
 
     con.connect(function(err) {
-        if (err) throw err;
+        //if (err) throw err;
     });
 
     var requestExists = true;
 
     con.query("DELETE FROM `friend-requests` WHERE senderID like " + data.senderID + " and recipientID like " + data.recipientID, function (err, result, fields) {
-        if (err) throw err;
+        //if (err) throw err;
         if (result.length == 0) {
             requestExists = false;
         }
@@ -627,11 +661,11 @@ async function AcceptFriendRequest(data, callback) {
 
     if (requestExists) {
         con.query("INSERT INTO friends (userID, friend) values (" + data.senderID + ", " + data.recipientID + ")", function (err, result, fields) {
-            if (err) throw err;
+            //if (err) throw err;
         });
 
         con.query("INSERT INTO friends (userID, friend) values (" + data.recipientID + ", " + data.senderID + ")", function (err, result, fields) {
-            if (err) throw err;
+            //if (err) throw err;
 
             con.destroy();
             return callback();
@@ -648,11 +682,11 @@ async function GetFriendRequests(data, callback) {
       });
 
     con.connect(function(err) {
-        if (err) throw err;
+        //if (err) throw err;
     });
 
     con.query("SELECT * FROM `friend-requests` WHERE recipientID like " + data.ID, function (err, result, fields) {
-        //if (err) throw err;
+        ////if (err) throw err;
         con.destroy();
         return callback(result);
     });
@@ -667,11 +701,11 @@ async function DeclineFriendRequest(data, callback) {
       });
 
     con.connect(function(err) {
-        if (err) throw err;
+        //if (err) throw err;
     });
 
     con.query("DELETE FROM `friend-requests` WHERE senderID like " + data.senderID + " and recipientID like " + data.recipientID, function (err, result, fields) {
-        if (err) throw err;
+        //if (err) throw err;
         con.destroy();
         return callback();
     });
@@ -686,11 +720,11 @@ async function SearchForUser(data, callback) {
       });
 
     con.connect(function(err) {
-        if (err) throw err;
+        //if (err) throw err;
     });
 
     con.query("SELECT * FROM users WHERE username like '" + data.username + "'", function (err, result, fields) {
-        if (err) throw err;
+        //if (err) throw err;
         con.destroy();
         return callback(result);
     });
@@ -705,11 +739,11 @@ async function GetUserSettings(data, callback) {
       });
 
     con.connect(function(err) {
-        if (err) throw err;
+        //if (err) throw err;
     });
 
     con.query("SELECT * FROM `user-settings` WHERE userID like '" + data.ID + "'", function (err, result, fields) {
-        if (err) throw err;
+        //if (err) throw err;
         con.destroy();
         return callback(result);
     });
@@ -724,15 +758,15 @@ async function ApplyUserSettings(data, callback) {
       });
 
     con.connect(function(err) {
-        if (err) throw err;
+        //if (err) throw err;
     });
 
     con.query("DELETE FROM `user-settings` WHERE userID like " + data.ID, function (err, result, fields) {
-        if (err) throw err;
+        //if (err) throw err;
     });
 
     con.query("INSERT INTO `user-settings` (userID, send_email_notifications) values (" + data.ID + ", " + data.send_email_notifications + ")", function (err, result, fields) {
-        if (err) throw err;
+        //if (err) throw err;
         return callback();
     });
 }
