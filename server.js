@@ -416,6 +416,33 @@ http.createServer(function (req, res) {
             })
         })
     }
+    else if (path === "/api/applyusersettings") {
+        if (req.method == "GET") {
+            res.writeHead(200, {
+                "Access-Control-Allow-Origin": "*",
+                "Content-Type": "text/html"
+            });
+    
+            return res.end("<h1>Invalid method</h1>");
+        }
+
+        res.writeHead(200, {
+            "Access-Control-Allow-Origin": "*",
+            "Content-Type": "text/plain"
+        });
+
+        let buffers = [];
+        req.on("data", (chunk) => {
+            buffers.push(chunk);
+        });
+
+        req.on("end", () => {
+            let data = JSON.parse(buffers.concat());
+            ApplyUserSettings(data, () => {
+                return res.end("OK");
+            })
+        })
+    }
 
 }).listen(8080);
 
@@ -685,5 +712,27 @@ async function GetUserSettings(data, callback) {
         if (err) throw err;
         con.destroy();
         return callback(result);
+    });
+}
+
+async function ApplyUserSettings(data, callback) {
+    var con = mysql.createConnection({
+        host: "localhost",
+        user: "login",
+        password: "",
+        database: "messagecat"
+      });
+
+    con.connect(function(err) {
+        if (err) throw err;
+    });
+
+    con.query("DELETE FROM `user-settings` WHERE userID like " + data.ID, function (err, result, fields) {
+        if (err) throw err;
+    });
+
+    con.query("INSERT INTO `user-settings` (userID, send_email_notifications) values (" + data.ID + ", " + data.send_email_notifications + ")", function (err, result, fields) {
+        if (err) throw err;
+        return callback();
     });
 }
