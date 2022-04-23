@@ -12,6 +12,9 @@ const mailTransporter = nodemailer.createTransport({
     }
 });
 
+var heartbeatBuffer = [];
+PresenceManager();
+
 http.createServer(function (req, res) {
     // Parse the URL to check the requested action
     var path = url.parse(req.url, true).pathname;
@@ -32,6 +35,10 @@ http.createServer(function (req, res) {
         });
 
         GetUser(req, (users) => {
+            if (users === undefined) {
+                return res.end("");
+            }
+            
             if (users.length == 1) {
                 return res.end(JSON.stringify(users[0]));
             }
@@ -455,6 +462,68 @@ http.createServer(function (req, res) {
             })
         })
     }
+    else if (path === "/api/heartbeat") {
+        if (req.method == "GET") {
+            res.writeHead(200, {
+                "Access-Control-Allow-Origin": "*",
+                "Content-Type": "text/html"
+            });
+    
+            return res.end("<h1>Invalid method</h1>");
+        }
+
+        res.writeHead(200, {
+            "Access-Control-Allow-Origin": "*",
+            "Content-Type": "text/plain"
+        });
+
+        let buffers = [];
+        req.on("data", (chunk) => {
+            buffers.push(chunk);
+        });
+
+        req.on("end", () => {
+            let data = JSON.parse(buffers.concat());
+            heartbeatBuffer.push(data);
+            return res.end("OK");
+        });
+    }
+    else if (path === "/api/getuseractivestate") {
+        if (req.method == "GET") {
+            res.writeHead(200, {
+                "Access-Control-Allow-Origin": "*",
+                "Content-Type": "text/html"
+            });
+    
+            return res.end("<h1>Invalid method</h1>");
+        }
+
+        res.writeHead(200, {
+            "Access-Control-Allow-Origin": "*",
+            "Content-Type": "application/json"
+        });
+
+        let buffers = [];
+        req.on("data", (chunk) => {
+            buffers.push(chunk);
+        });
+
+        req.on("end", () => {
+            let data = JSON.parse(buffers.concat());
+            GetUserActiveState(data, (result) => {
+                if (result === undefined) {
+                    return res.end("");
+                }
+
+                if (result.length == 1) {
+                    return res.end(JSON.stringify(result[0]));
+                }
+                else {
+                    return res.end("");
+                }
+            })
+        });
+    }
 
 }).listen(8080);
 
@@ -775,5 +844,72 @@ async function ApplyUserSettings(data, callback) {
     con.query("INSERT INTO `user-settings` (userID, send_email_notifications) values (" + data.ID + ", " + data.send_email_notifications + ")", function (err, result, fields) {
         //if (err) throw err;
         return callback();
+    });
+}
+
+async function PresenceManager() {
+    while (true) {
+        await new Promise(resolve => setTimeout(resolve, 10000));
+
+        var con = mysql.createConnection({
+            host: "localhost",
+            user: "login",
+            password: "",
+            database: "messagecat",
+            multipleStatements: true
+        });
+
+        con.connect(function(err) {
+            //if (err) throw err;
+        });
+
+        let setActiveQuery = "UPDATE `user-active-states` SET active = 1 WHERE ";
+
+        for (let i = 0; i < heartbeatBuffer.length; i++) {
+            let newCondition = "";
+            if (i != 0) {
+                newCondition += " or ";
+            }
+
+            newCondition += "userID like " + heartbeatBuffer[i].ID;
+            setActiveQuery += newCondition;
+        }
+
+        let setInactiveQuery = "UPDATE `user-active-states` SET active = 0 WHERE ";
+    
+        for (let i = 0; i < heartbeatBuffer.length; i++) {
+            let newCondition = "";
+            if (i != 0) {
+                newCondition += " and ";
+            }
+
+            newCondition += "userID not like " + heartbeatBuffer[i].ID;
+            setInactiveQuery += newCondition;
+        }
+
+        heartbeatBuffer = [];
+        
+        con.query(setInactiveQuery + "; " + setActiveQuery, function (err, result, fields) {
+            con.destroy();
+        });
+    }
+}
+
+async function GetUserActiveState(data, callback) {
+    var con = mysql.createConnection({
+        host: "localhost",
+        user: "login",
+        password: "",
+        database: "messagecat",
+    });
+
+    con.connect(function (err) {
+        //if (err) throw err;
+    });
+
+    con.query("SELECT * FROM `user-active-states` WHERE userID like " + data.ID, function (err, result, fields) {
+        //if (err) throw err;
+        con.destroy();
+        return callback(result);
     });
 }
