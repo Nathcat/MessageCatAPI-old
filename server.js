@@ -588,13 +588,21 @@ async function CreateUser(data, callback) {
                 host: "localhost",
                 user: "login",
                 password: "",
-                database: "messagecat"
+                database: "messagecat",
+                multipleStatements: true
             });
         
             con.connect(function(err) {
                 //if (err) throw err;
             });
         
+            con.query("INSERT INTO users (username, password, email) values ('" + data.username + "', '" + data.password + "', '" + data.email + "'); INSERT INTO `user-settings` (userID) SELECT ID FROM users WHERE email like '" + data.email + "'; INSERT INTO `user-active-states` (userID, active) SELECT ID, 0 FROM users WHERE email like '" + data.email + "';", function (err, result, fields) {
+                if (err) throw err;
+                con.destroy();
+                callback();
+            });
+
+            /*
             con.query("INSERT INTO users (username, password, email) values ('" + data.username + "', '" + data.password + "', '" + data.email + "')", function (err, result, fields) {
                 //if (err) throw err;
                 con.query("SELECT * FROM users WHERE email like '" + data.email + "'", function (err, result, fields) {
@@ -606,7 +614,7 @@ async function CreateUser(data, callback) {
                         callback();
                     })
                 })
-            });
+            });*/
         }
         else if (users.length == 1){
             callback();
@@ -708,7 +716,7 @@ async function SendFriendRequest(data, callback) {
     });
 
     con.query("INSERT INTO `friend-requests` (senderID, recipientID) values (" + data.senderID + ", " + data.recipientID + ")", function (err, result, fields) {
-        ////if (err) throw err;
+        //if (err) throw err;
         con.destroy();
 
         RequestUserByID(data.recipientID, (users) => {
