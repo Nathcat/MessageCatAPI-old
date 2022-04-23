@@ -694,33 +694,36 @@ async function SendFriendRequest(data, callback) {
         host: "localhost",
         user: "login",
         password: "",
-        database: "messagecat"
+        database: "messagecat",
+        multipleStatements: true
       });
 
     con.connect(function(err) {
         //if (err) throw err;
     });
 
-    con.query("INSERT INTO `friend-requests` (senderID, recipientID) values (" + data.senderID + ", " + data.recipientID + ")", function (err, result, fields) {
+    con.query("INSERT INTO `friend-requests` (senderID, recipientID) values (" + data.senderID + ", " + data.recipientID + "); SELECT * FROM `user-settings` WHERE userID like " + data.recipientID + ";", function (err, result, fields) {
         //if (err) throw err;
         con.destroy();
 
-        RequestUserByID(data.recipientID, (users) => {
-            let recipientData = JSON.parse(JSON.stringify(users[0]));
+        if (JSON.parse(JSON.stringify(result[1][0])).send_email_notifications === 1) {
+            RequestUserByID(data.recipientID, (users) => {
+                let recipientData = JSON.parse(JSON.stringify(users[0]));
 
-            RequestUserByID(data.senderID, (sender) => {
-                let senderData = JSON.parse(JSON.stringify(sender[0]));
+                RequestUserByID(data.senderID, (sender) => {
+                    let senderData = JSON.parse(JSON.stringify(sender[0]));
 
-                let mail = {
-                    from: 'messagecatnotifications@gmail.com',
-                    to: recipientData.email,
-                    subject: senderData.username + " sent you a friend request",
-                    html: senderData.username + " sent you a friend request."
-                }
+                    let mail = {
+                        from: 'messagecatnotifications@gmail.com',
+                        to: recipientData.email,
+                        subject: senderData.username + " sent you a friend request",
+                        html: senderData.username + " sent you a friend request."
+                    }
 
-                mailTransporter.sendMail(mail, function(error, info) {});
+                    mailTransporter.sendMail(mail, function(error, info) {});
+                })
             })
-        })
+        }
 
         return callback();
     });
