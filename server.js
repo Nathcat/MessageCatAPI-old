@@ -597,24 +597,10 @@ async function CreateUser(data, callback) {
             });
         
             con.query("INSERT INTO users (username, password, email) values ('" + data.username + "', '" + data.password + "', '" + data.email + "'); INSERT INTO `user-settings` (userID) SELECT ID FROM users WHERE email like '" + data.email + "'; INSERT INTO `user-active-states` (userID, active) SELECT ID, 0 FROM users WHERE email like '" + data.email + "';", function (err, result, fields) {
-                if (err) throw err;
+                //if (err) throw err;
                 con.destroy();
                 callback();
             });
-
-            /*
-            con.query("INSERT INTO users (username, password, email) values ('" + data.username + "', '" + data.password + "', '" + data.email + "')", function (err, result, fields) {
-                //if (err) throw err;
-                con.query("SELECT * FROM users WHERE email like '" + data.email + "'", function (err, result, fields) {
-                    //if (err) throw err;
-                    let newUserData = JSON.parse(JSON.stringify(result[0]));
-                    con.query("INSERT INTO `user-settings` (userID) values (" + newUserData.ID + ")", function (err, result, fields) {
-                        //if (err) throw err;
-                        con.destroy();
-                        callback();
-                    })
-                })
-            });*/
         }
         else if (users.length == 1){
             callback();
