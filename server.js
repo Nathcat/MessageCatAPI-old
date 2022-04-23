@@ -665,8 +665,8 @@ async function SendMessage(messageJson, callback) {
                     let mail = {
                         from: 'messagecatnotifications@gmail.com',
                         to: recipientData.email,
-                        subject: senderData.username + " sent you a message!",
-                        html: '<a href="http://messagecat.nathcat.cloudns.cl/">Go to MessageCat</a>'
+                        subject: senderData.username + " sent you a message",
+                        html: senderData.username + " said '" + messageJson.content + "'."
                     }
 
                     mailTransporter.sendMail(mail, function(error, info) {});
@@ -710,6 +710,24 @@ async function SendFriendRequest(data, callback) {
     con.query("INSERT INTO `friend-requests` (senderID, recipientID) values (" + data.senderID + ", " + data.recipientID + ")", function (err, result, fields) {
         ////if (err) throw err;
         con.destroy();
+
+        RequestUserByID(data.recipientID, (users) => {
+            let recipientData = JSON.parse(JSON.stringify(users[0]));
+
+            RequestUserByID(data.senderID, (sender) => {
+                let senderData = JSON.parse(JSON.stringify(sender[0]));
+
+                let mail = {
+                    from: 'messagecatnotifications@gmail.com',
+                    to: recipientData.email,
+                    subject: senderData.username + " sent you a friend request",
+                    html: senderData.username + " sent you a friend request."
+                }
+
+                mailTransporter.sendMail(mail, function(error, info) {});
+            })
+        })
+
         return callback();
     });
 }
