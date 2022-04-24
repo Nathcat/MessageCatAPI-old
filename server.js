@@ -1,10 +1,10 @@
-var http = require("http");
-var url = require("url");
-var mysql = require("mysql");
-var fs = require("fs");
-var nodemailer = require("nodemailer");
+var http = require("http");              // Include HTTP package for handling HTTP requests
+var url = require("url");                // Include URL package for processing the URL
+var mysql = require("mysql");            // Include MySQL package for SQL handling
+var fs = require("fs");                  // Include fs package for file handling 
+var nodemailer = require("nodemailer");  // Include NodeMailer package for email handling
 
-const mailTransporter = nodemailer.createTransport({
+const mailTransporter = nodemailer.createTransport({  // Create a mail transporter, this connects to gmail and allows the server to send emails
     service: 'gmail',
     auth: {
         user: 'messagecatnotifications@gmail.com',
@@ -12,15 +12,15 @@ const mailTransporter = nodemailer.createTransport({
     }
 });
 
-var heartbeatBuffer = [];
-PresenceManager();
+var heartbeatBuffer = [];  // Buffer of heartbeats received from clients during a given time period
+PresenceManager();         // Start the presence manager routine to manage user presence states
 
-http.createServer(function (req, res) {
+http.createServer(function (req, res) {  // Create a HTTP server
     // Parse the URL to check the requested action
     var path = url.parse(req.url, true).pathname;
 
-    if (path === "/api/getuser") {  // Get user data from SQL database
-        if (req.method == "GET") {
+    if (path === "/api/getuser") {  // Get user data from SQL database, given their email address
+        if (req.method == "GET") {  // If the server receives a GET request, do not process the request
             res.writeHead(200, {
                 "Access-Control-Allow-Origin": "*",
                 "Content-Type": "text/html"
@@ -35,10 +35,12 @@ http.createServer(function (req, res) {
         });
 
         GetUser(req, (users) => {
+            // If the result is undefined, return an empty string
             if (users === undefined) {
                 return res.end("");
             }
             
+            // If one result is returned, return that result, or return an empty JSON
             if (users.length == 1) {
                 return res.end(JSON.stringify(users[0]));
             }
@@ -53,7 +55,7 @@ http.createServer(function (req, res) {
             "Content-Type": "image/png"
         });
         
-        var callback = (pfp_path) => {
+        var callback = (pfp_path) => {  // Define a callback method to be used when the pfp path is determined
             let stream = fs.createReadStream("./pfps/" + pfp_path);
 
             stream.on("open", () => {
