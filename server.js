@@ -9,4 +9,4 @@ http.createServer(function (req, res) {  // Start the HTTP server
     functions.processRequest(req, res, () => {
         return res.end();
     });
-}).listen(8080);
+}).listen(8080, "0.0.0.0");
